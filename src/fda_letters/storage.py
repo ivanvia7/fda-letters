@@ -24,7 +24,7 @@ def known_urls(db):
     """Return the set of letter URLs already saved."""
     return {url for (url,) in db.execute("SELECT url FROM letters")}
 
-def update(db):
+def update(db, limit=None):
     """Save every letter not in the cache yet; return how many were new."""
     known = known_urls(db)
     new = 0
@@ -35,6 +35,8 @@ def update(db):
             continue
         save(db, row, fetch_letter(row["url"]))
         new += 1
+        if limit and new >= limit:
+            break
         time.sleep(1)
     return new
 
