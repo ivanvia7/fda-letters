@@ -1,4 +1,4 @@
-import httpx 
+from fda_letters.letter import CLIENT
 import time
 import re
 
@@ -43,7 +43,7 @@ def fetch_index():
     start = 0
     while True:
         params = PARAMS | {"start": start, "length": 500}
-        page = httpx.get(URL, params=params, timeout=30).json()
+        page = CLIENT.get(URL, params=params).json()
         if not page["data"]:
             break
         rows.extend(page["data"])
