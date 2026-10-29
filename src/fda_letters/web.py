@@ -1,4 +1,6 @@
 import json
+import re
+import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -12,8 +14,8 @@ FILES = {"/letters.csv": "text/csv", "/letters.jsonl": "application/x-ndjson"}
 STATUS = {"state": "idle", "done": 0, "total": 0, "error": ""}
 ISSUED = "json_extract(row, '$.issued')"
 MATCH = (
-    "WHERE json_extract(row, '$.company') LIKE ?1"
-    " OR json_extract(row, '$.subject') LIKE ?1"
+    "WHERE json_extract(row, '$.company') LIKE :q ESCAPE '\\'"
+    " OR json_extract(row, '$.subject') LIKE :q ESCAPE '\\'"
 )
 
 PAGE = b"""<!doctype html>
@@ -23,8 +25,8 @@ PAGE = b"""<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>fda-letters</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <style>
 /* Carbon g100 dark tokens, same as the task board */
 :root { --bg: #161616; --layer: #262626; --layer2: #393939; --hover: #333;
@@ -133,23 +135,29 @@ td:first-child { white-space: nowrap; }
 const form = document.getElementById("start");
 const bar = document.getElementById("bar");
 const text = document.getElementById("text");
-const picker = flatpickr("#since", {
+// Without the CDN the field stays a plain YYYY-MM-DD text box.
+const since = document.getElementById("since");
+const picker = window.flatpickr && flatpickr(since, {
   dateFormat: "Y-m-d", altInput: true, altFormat: "j M Y",
   minDate: "2021-01-01", maxDate: "today",
 });
 let lastState = "";
+let error = "";  // why the last fetch did not start; poll keeps it on screen
 
 document.querySelectorAll("[data-days]").forEach((button) => {
   button.onclick = () => {
     const days = Number(button.dataset.days);
-    days ? picker.setDate(new Date(Date.now() - days * 864e5)) : picker.clear();
+    const day = days ? new Date(Date.now() - days * 864e5) : "";
+    if (picker) picker.setDate(day);
+    else since.value = day && day.toISOString().slice(0, 10);
   };
 });
 
 form.onsubmit = async (event) => {
   event.preventDefault();
   const body = new URLSearchParams(new FormData(form));
-  await fetch("/start", {method: "POST", body});
+  const response = await fetch("/start", {method: "POST", body});
+  error = response.ok ? "" : response.statusText;
   poll();
 };
 
@@ -167,7 +175,7 @@ async function poll() {
   bar.max = Math.max(s.total, 1);
   bar.value = s.state === "done" ? bar.max : s.done;
   text.textContent = {
-    idle: "Fetches only letters not saved yet. One request a second.",
+    idle: error || "Fetches only letters not saved yet. One request a second.",
     running: `${s.done} of ${s.total} new letters`,
     done: `Done. ${s.total} new letters saved.`,
     failed: `Failed: ${s.error}`,
@@ -225,7 +233,7 @@ def run(limit, since):
 def letters(query):
     """Count saved letters matching a search; return the 50 newest."""
     db = open_db()
-    like = (f"%{query}%",)
+    like = {"q": "%" + re.sub(r"([%_\\])", r"\\\1", query) + "%"}
     total, first, last = db.execute(
         f"SELECT count(*), min({ISSUED}), max({ISSUED}) FROM letters {MATCH}", like
     ).fetchone()
@@ -243,31 +251,47 @@ def letters(query):
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         url = urlparse(self.path)
-        if url.path == "/letters":
+        path = url.path
+        if path == "/letters":
             query = parse_qs(url.query).get("q", [""])[0]
             self.reply(json.dumps(letters(query)).encode(), "application/json")
-        elif self.path == "/":
+        elif path == "/":
             self.reply(PAGE, "text/html; charset=utf-8")
-        elif self.path == "/status":
+        elif path == "/status":
             self.reply(json.dumps(STATUS).encode(), "application/json")
-        elif self.path in ("/export.csv", "/export.jsonl"):
-            # Write every saved letter fresh, so the file matches the table.
-            name = "letters" + self.path.removeprefix("/export")
-            (to_csv if name.endswith(".csv") else to_jsonl)(open_db(), name)
-            self.reply(Path(name).read_bytes(), FILES["/" + name])
-        elif self.path in FILES and Path(self.path[1:]).exists():
-            self.reply(Path(self.path[1:]).read_bytes(), FILES[self.path])
+        elif path in ("/export.csv", "/export.jsonl"):
+            # Every saved letter, in a temp file, so the fetch result files stay.
+            name = "letters" + path.removeprefix("/export")
+            with tempfile.TemporaryDirectory() as folder:
+                file = Path(folder, name)
+                (to_csv if name.endswith(".csv") else to_jsonl)(open_db(), file)
+                self.reply(file.read_bytes(), FILES["/" + name])
+        elif path in FILES and Path(path[1:]).exists():
+            self.reply(Path(path[1:]).read_bytes(), FILES[path])
         else:
             self.send_error(404)
 
     def do_POST(self):
+        # Browsers send Origin on a POST, so another site cannot start a fetch.
+        port = self.server.server_port
+        origin = self.headers.get("Origin")
+        if origin and origin not in (f"http://localhost:{port}", f"http://127.0.0.1:{port}"):
+            self.send_error(403)
+            return
         if self.path != "/start" or STATUS["state"] == "running":
             self.send_error(409)
             return
         length = int(self.headers.get("Content-Length", 0))
         form = parse_qs(self.rfile.read(length).decode())
-        limit = int(form["limit"][0]) if "limit" in form else None
+        limit = form.get("limit", [""])[0]
         since = form.get("since", [""])[0]
+        if limit and not re.fullmatch(r"[1-9][0-9]{0,5}", limit):
+            self.send_error(400, "Max new letters must be a whole number above 0")
+            return
+        if since and not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", since):
+            self.send_error(400, "Issued since must be YYYY-MM-DD")
+            return
+        limit = int(limit) if limit else None
         # Set before the thread starts, so the next /status already says running.
         STATUS.update(state="running", done=0, total=0, error="")
         threading.Thread(target=run, args=(limit, since), daemon=True).start()

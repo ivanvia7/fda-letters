@@ -38,7 +38,7 @@ def update(db, limit=None, since="", progress=None):
     known = known_urls(db)
     rows = [parse_row(raw) for raw in fetch_index()]
     rows = [r for r in rows if r["url"] not in known and r["issued"] >= since]
-    rows = rows[:limit] if limit else rows
+    rows = rows[:limit] if limit is not None else rows
 
     for done, row in enumerate(rows, 1):
         save(db, row, fetch_letter(row["url"]))

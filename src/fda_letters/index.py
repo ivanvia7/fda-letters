@@ -1,3 +1,4 @@
+import html
 import re
 import time
 
@@ -15,8 +16,8 @@ PARAMS = {
 
 
 def clean(cell):
-    # Remove HTML tags and leading/trailing whitespace
-    return re.sub(r"<[^>]*>", "", cell).strip()
+    # Remove HTML tags, decode &amp; and the like, trim whitespace
+    return html.unescape(re.sub(r"<[^>]*>", "", cell)).strip()
 
 
 def date_in(cell):

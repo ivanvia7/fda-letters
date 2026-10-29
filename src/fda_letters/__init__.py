@@ -13,9 +13,11 @@ def main() -> None:
         "--since", default="", help="only letters issued on or after YYYY-MM-DD"
     )
     parser.add_argument(
-        "--serve", action="store_true", help="open a web page on localhost:8000"
+        "--serve", action="store_true", help="serve a web page on localhost:8000"
     )
     args = parser.parse_args()
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be 1 or more")
     if args.serve:
         serve()
         return
