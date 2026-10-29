@@ -12,3 +12,18 @@ Why: fda.gov splits the fields across 3 `<dl>` boxes. Only one has a class
 Class names are design names, and a restyle silently drops fields.
 
 Use a class only when no tag or role marks the box you need.
+
+## The web page never blocks
+
+`--serve` runs on `ThreadingHTTPServer`, so each request gets its own thread.
+A fetch runs in a background thread, and the page asks `/status` once a second.
+Search and downloads keep working while a fetch runs.
+A second fetch while one runs gets HTTP 409, so two fetches never write to `letters.db` at once.
+
+Keep it that way: never do network or long work inside a request handler.
+
+## The proxy is optional
+
+With no `HTTPS_PROXY`, requests go straight to fda.gov.
+Set `HTTPS_PROXY` only when fda.gov blocks your IP or your network needs a proxy.
+The CLI and `--serve` both read it from the same client in `letter.py`.
