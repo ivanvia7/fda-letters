@@ -27,3 +27,14 @@ Keep it that way: never do network or long work inside a request handler.
 With no `HTTPS_PROXY`, requests go straight to fda.gov.
 Set `HTTPS_PROXY` only when fda.gov blocks your IP or your network needs a proxy.
 The CLI and `--serve` both read it from the same client in `letter.py`.
+
+## Commit and branch names
+
+Commit subject: `type(fda-letters): Sentence in the imperative`.
+
+- `type` is one of `feat`, `fix`, `docs`, `test`, `chore`.
+- Start the sentence with a capital letter, no period at the end.
+- Say what changes for the user: `fix(fda-letters): Stop on HTTP errors, reject bad --out`.
+- Never put an issue number or `Closes #N` in a commit; link issues from the PR.
+
+Branch name: `type/short-words`, for example `docs/commit-style`.
