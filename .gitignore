@@ -6,3 +6,4 @@ dist/
 letters.db
 letters.csv
 letters.jsonl
+.env

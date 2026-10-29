@@ -1,10 +1,16 @@
-import httpx 
+import os
+
+import httpx
 from selectolax.lexbor import LexborHTMLParser
 
 CLIENT = httpx.Client(
     headers={"User-Agent": "fda-letters/0.1 (open-source FDA letter archive)"},
     timeout=30,
-    transport=httpx.HTTPTransport(local_address="0.0.0.0", retries=3),
+    transport=httpx.HTTPTransport(
+        local_address="0.0.0.0",
+        retries=3,
+        proxy=os.environ.get("HTTPS_PROXY"),
+    ),
 )
 
 def parse_letter(html): 
