@@ -1,10 +1,11 @@
 import csv
 import json
 
+from fda_letters.citations import cfr_rules, usc_sections
 from fda_letters.storage import open_db
 
 COLUMNS = ["posted", "issued", "company", "url", "office", "subject",
-           "closeout", "Product", "Recipient", "Delivery Method"]
+           "closeout", "Product", "Recipient", "Delivery Method", "cfr", "usc"]
 
 def to_csv(db, path):
     """Write one CSV line per saved letter; the full text stays out."""
@@ -13,7 +14,11 @@ def to_csv(db, path):
         writer = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")
         writer.writeheader()
         for row, letter in db.execute("SELECT row, letter FROM letters"):
-            writer.writerow(json.loads(row) | json.loads(letter))
+            letter = json.loads(letter)
+            writer.writerow(json.loads(row) | letter | {
+                "cfr": "; ".join(cfr_rules(letter["text"])),
+                "usc": "; ".join(usc_sections(letter["text"])),
+            })
             
 def to_jsonl(db, path):
     """Write one JSON object per saved letter; text included."""
