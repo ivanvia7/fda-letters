@@ -1,13 +1,17 @@
 [project]
 name = "fda-letters"
 version = "0.1.0"
-description = "Add your description here"
+description = "Download every FDA warning letter to CSV or JSONL, with cited rules parsed out"
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "ivanvia7", email = "ivanvia76@gmail.com" }
 ]
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.28.1",
+    "selectolax>=1.0.2",
+]
 
 [project.scripts]
 fda-letters = "fda_letters:main"
@@ -15,3 +19,8 @@ fda-letters = "fda_letters:main"
 [build-system]
 requires = ["uv_build>=0.13.6,<0.14.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]

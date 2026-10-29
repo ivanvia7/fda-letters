@@ -3,3 +3,9 @@ __pycache__/
 .venv/
 dist/
 *.egg-info/
+letters.db
+letters.csv
+letters.jsonl
+.env
+.playwright-mcp/
+.proxy-mcp/
