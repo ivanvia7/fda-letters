@@ -1,6 +1,7 @@
-from fda_letters.letter import CLIENT
-import time
 import re
+import time
+
+from fda_letters.letter import CLIENT
 
 URL = "https://www.fda.gov/datatables/views/ajax"
 
@@ -10,21 +11,21 @@ PARAMS = {
     "view_name": "warning_letter_solr_index",
     "view_display_id": "warning_letter_solr_block",
     "start": 0,
-    "length": 3,
 }
+
 
 def clean(cell):
     # Remove HTML tags and leading/trailing whitespace
     return re.sub(r"<[^>]*>", "", cell).strip()
 
+
 def date_in(cell):
     # Extract date in YYYY-MM-DD format from datetime attribute
     match = re.search(r'datetime="(\d{4}-\d{2}-\d{2})', cell)
-    if match: 
-        return match.group(1)
-    return None
+    return match.group(1) if match else None
 
-def parse_row(row):    
+
+def parse_row(row):
     link = re.search(r'href="([^"]+)"', row[2]).group(1)
     return {
         "posted": date_in(row[0]),
@@ -36,22 +37,20 @@ def parse_row(row):
         "closeout": date_in(row[6]),
     }
 
+
 def fetch_index():
     """Download every letter row from fda.gov, 500 per request."""
-    
+
     rows = []
     start = 0
     while True:
         params = PARAMS | {"start": start, "length": 500}
-        page = CLIENT.get(URL, params=params).json()
+        response = CLIENT.get(URL, params=params)
+        response.raise_for_status()
+        page = response.json()
         if not page["data"]:
             break
         rows.extend(page["data"])
         start += 500
         time.sleep(1)
     return rows
-
-if __name__ == "__main__":
-    rows = fetch_index()
-    print(len(rows))
-    print(parse_row(rows[0]))

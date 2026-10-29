@@ -1,12 +1,12 @@
 [project]
 name = "fda-letters"
 version = "0.1.0"
-description = "Add your description here"
+description = "Download every FDA warning letter to CSV or JSONL, with cited rules parsed out"
 readme = "README.md"
 authors = [
     { name = "ivanvia7", email = "ivanvia76@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",
     "selectolax>=1.0.2",

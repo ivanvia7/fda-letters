@@ -13,7 +13,8 @@ CLIENT = httpx.Client(
     ),
 )
 
-def parse_letter(html): 
+
+def parse_letter(html):
     page = LexborHTMLParser(html)
     fields = {}
     # Drop hidden labels like "Recipient Name" so they stay out of the values.
@@ -26,24 +27,22 @@ def parse_letter(html):
         parts = []
         node = label.next
         while node is not None and node.tag != "dt":
-            text = " ".join(node.text(separator=" ").split()) if node.tag == "dd" else ""
+            text = (
+                " ".join(node.text(separator=" ").split()) if node.tag == "dd" else ""
+            )
             if text:
                 parts.append(text)
             node = node.next
         fields[label.text(strip=True).rstrip(":")] = ", ".join(parts)
-    
+
     body = page.css_first("div[role=main]")
     lines = body.text(separator="\n", strip=True).splitlines()
-    
+
     fields["text"] = "\n".join(line for line in lines if line.strip())
     return fields
 
 
 def fetch_letter(url):
-   return parse_letter(CLIENT.get(url).text)
-
-if __name__ == "__main__":
-    url = "https://www.fda.gov/inspections-compliance-enforcement-and-criminal-investigations/warning-letters/rohto-pharmaceutical-co-ltd-733215-10142026"
-    letter = fetch_letter(url)
-    for key, value in letter.items():
-        print(key, "=", value[:80])
+    response = CLIENT.get(url)
+    response.raise_for_status()
+    return parse_letter(response.text)
