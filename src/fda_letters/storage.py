@@ -30,18 +30,19 @@ def known_urls(db):
     return {url for (url,) in db.execute("SELECT url FROM letters")}
 
 
-def update(db, limit=None, since=""):
-    """Save every letter not in the cache yet; return how many were new."""
-    known = known_urls(db)
-    new = 0
+def update(db, limit=None, since="", progress=None):
+    """Save every letter not in the cache yet; return how many were new.
 
-    for raw in fetch_index():
-        row = parse_row(raw)
-        if row["url"] in known or row["issued"] < since:
-            continue
+    progress, if given, is called as progress(done, total) after each letter.
+    """
+    known = known_urls(db)
+    rows = [parse_row(raw) for raw in fetch_index()]
+    rows = [r for r in rows if r["url"] not in known and r["issued"] >= since]
+    rows = rows[:limit] if limit else rows
+
+    for done, row in enumerate(rows, 1):
         save(db, row, fetch_letter(row["url"]))
-        new += 1
-        if limit and new >= limit:
-            break
+        if progress:
+            progress(done, len(rows))
         time.sleep(1)
-    return new
+    return len(rows)
