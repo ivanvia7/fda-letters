@@ -28,7 +28,7 @@ PAGE = b"""<!doctype html>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <style>
-/* Carbon g100 dark tokens, same as the task board */
+/* IBM Carbon g100 dark theme colors */
 :root { --bg: #161616; --layer: #262626; --layer2: #393939; --hover: #333;
   --border: #6f6f6f; --text: #f4f4f4; --text2: #c6c6c6; --helper: #a8a8a8;
   --link: #78a9ff; --blue: #0f62fe; --success: #42be65; --error: #fa4d56; }
