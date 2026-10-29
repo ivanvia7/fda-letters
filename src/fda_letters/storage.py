@@ -24,14 +24,14 @@ def known_urls(db):
     """Return the set of letter URLs already saved."""
     return {url for (url,) in db.execute("SELECT url FROM letters")}
 
-def update(db, limit=None):
+def update(db, limit=None, since=""):
     """Save every letter not in the cache yet; return how many were new."""
     known = known_urls(db)
     new = 0
     
     for raw in fetch_index():
         row = parse_row(raw)
-        if row["url"] in known:
+        if row["url"] in known or row["issued"] < since:
             continue
         save(db, row, fetch_letter(row["url"]))
         new += 1
