@@ -12,6 +12,7 @@ fda-letters --serve
 
 The first run fetches every letter into `letters.db` in the current folder.
 Later runs fetch only new letters.
+fda.gov lists letters issued from 2021 on: 3,797 letters on 2026-11-04.
 `--serve` serves a page on http://localhost:8000 to fetch, search and export.
 
 ## Options
