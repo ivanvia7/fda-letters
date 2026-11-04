@@ -23,7 +23,8 @@ def cfr_rules(text):
     found = set()
     for chunk in CFR.findall(text):
         found.update(re.findall(r"\d+\.\d+", chunk))
-    return sorted(found)
+    # By number, so 211.22 sorts before 211.194.
+    return sorted(found, key=lambda rule: [int(n) for n in rule.split(".")])
 
 
 def usc_sections(text):

@@ -14,3 +14,11 @@ def test_cfr_spellings():
     assert cfr_rules("21 CFR part 1.502(a)") == ["1.502"]
     assert cfr_rules("21 CFR1.502") == ["1.502"]
     assert cfr_rules("21 CFR parts 210 and 211") == []
+
+
+def test_cfr_number_order():
+    assert cfr_rules("21 CFR 211.194, 211.22 and 1100.1") == [
+        "211.22",
+        "211.194",
+        "1100.1",
+    ]
