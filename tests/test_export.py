@@ -51,6 +51,8 @@ def test_jsonl_one_line_per_letter_letter_wins(tmp_path):
     assert len(rows) == 2
     assert rows["Acme"]["text"] == TEXT
     assert rows["Acme"]["subject"] == "L"
+    assert rows["Acme"]["cfr"] == "211.22; 801.3"
+    assert rows["Acme"]["usc"] == "331; 355"
     assert rows["Beta"]["text"] == "b"
 
 
