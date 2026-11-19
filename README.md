@@ -2,6 +2,11 @@
 
 Download every FDA warning letter to CSV or JSONL, with the cited CFR rules and U.S.C. sections parsed out.
 
+FDA posts warning letters as web pages, one at a time, with no bulk download.
+Quality and regulatory teams read them to see what FDA cites and where:
+which 21 CFR 211 sections come up most for drug makers, or what device makers get cited for under part 820.
+This tool turns the pages into one table you can filter, count and chart.
+
 ## Quick start
 
 ```sh
@@ -11,7 +16,10 @@ fda-letters --serve
 ```
 
 The first run fetches every letter into `letters.db` in the current folder.
+It sends one request a second, so the first full run takes about 1.5 to 2 hours.
+Stop it any time: saved letters stay, and the next run picks up where it stopped.
 Later runs fetch only new letters.
+A letter page that fda.gov fails to serve is skipped and tried again on the next run.
 fda.gov lists letters issued from 2021 on: 3,797 letters on 2026-11-04.
 `--serve` serves a page on http://localhost:8000 to fetch, search and export.
 
@@ -20,6 +28,37 @@ fda.gov lists letters issued from 2021 on: 3,797 letters on 2026-11-04.
 - `--out letters.csv` or `--out letters.jsonl` picks the format.
 - `--since 2026-01-01` keeps letters issued on or after that date.
 - `--limit 50` stops after 50 new letters.
+- `--no-fetch` exports the letters already in `letters.db` without asking fda.gov.
+
+## Output
+
+One row per letter. Columns:
+
+| Column | Example |
+|---|---|
+| `posted`, `issued`, `closeout` | `2026-11-06` |
+| `company`, `url`, `office`, `subject` | from the fda.gov letter list |
+| `Product`, `Recipient`, `Delivery Method` | from the letter page |
+| `cfr` | `211.22; 211.100; 211.192` cited 21 CFR sections |
+| `cfr_parts` | `210; 211` 21 CFR parts cited whole |
+| `usc` | `331; 351; 360eee-1` cited 21 U.S.C. sections |
+
+CSV leaves out the letter text. JSONL includes it as `text`.
+
+## How accurate the citations are
+
+The parser is a set of regular expressions in `src/fda_letters/citations.py`.
+`tests/test_citation_eval.py` scores it against hand-checked labels for 30 random letters in `tests/fixtures/eval/`:
+
+| Column | Precision | Recall | Citations in the 30 letters |
+|---|---|---|---|
+| `cfr` | 100% | 98.8% | 83 |
+| `cfr_parts` | 100% | 100% | 40 |
+| `usc` | 100% | 100% | 141 |
+
+Labels come from comparing the parser to a looser search and reading every place they disagree.
+The one miss is `CFR 201.66(b)(2)` written without the "21".
+Run `uv run python tests/test_citation_eval.py` to print the scores; CI fails if they drop.
 
 ## Web page
 
