@@ -23,7 +23,11 @@ COLUMNS = [
     "usc",
 ]
 # Letters issued on or after a YYYY-MM-DD date; "" keeps every letter.
-SINCE = "SELECT row, letter FROM letters WHERE json_extract(row, '$.issued') >= ?"
+# COALESCE keeps letters with no issue date in a full export (NULL >= '' is NULL).
+SINCE = (
+    "SELECT row, letter FROM letters"
+    " WHERE COALESCE(json_extract(row, '$.issued'), '') >= ?"
+)
 
 
 Path = str | PathLike[str]

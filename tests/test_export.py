@@ -66,3 +66,12 @@ def test_since_filter(tmp_path):
     assert [r["company"] for r in read_jsonl(tmp_path / "out.jsonl")] == ["New"]
     to_csv(db, tmp_path / "all.csv")
     assert len(read_csv(tmp_path / "all.csv")) == 2
+
+
+def test_undated_letter_in_full_export_only(tmp_path):
+    db = open_db(tmp_path / "letters.db")
+    save(db, row("Undated", None), {"text": ""})
+    to_csv(db, tmp_path / "all.csv")
+    assert [r["company"] for r in read_csv(tmp_path / "all.csv")] == ["Undated"]
+    to_csv(db, tmp_path / "since.csv", since="2026-01-01")
+    assert read_csv(tmp_path / "since.csv") == []

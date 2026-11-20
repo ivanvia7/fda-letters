@@ -3,23 +3,24 @@ import re
 # One rule: digits, a dot, digits, then any "(a)" parts. Lists join like USC below.
 RULE = r"\d+\.\d+(?:\(\w+\))*"
 JOIN = r"(?:,? and |,? or |, )"
-# "21 CFR", "21CFR" or "21 C.F.R."
-CFR_TITLE = r"21 ?C\.?F\.?R\.? ?"
+# "21 CFR", "21CFR", "21 C.F.R." or "21 CFR," as in "(21 CFR, Part 820)"
+CFR_TITLE = r"21 ?C\.?F\.?R\.?,? ?"
 
-# Title, then an optional "§ ", "§§ " or "part " before the rules.
-CFR = re.compile(rf"{CFR_TITLE}(?:§§? |[Pp]art )?({RULE}(?:{JOIN}{RULE})*)")
+# Title, then an optional "§", "§§" or "part " before the rules.
+CFR = re.compile(rf"{CFR_TITLE}(?:§§? ?|[Pp]art )?({RULE}(?:{JOIN}{RULE})*)")
 
-# "21 CFR part 211" or "parts 210 and 211": whole parts, no section after them,
-# and not the "21" of a next "21 CFR".
+# "21 CFR part 211", "parts 210 and 211" or a bare "21 CFR 312": whole parts,
+# no section after them, and not the "21" of a next "21 CFR".
 PART = r"\d+\b(?!\.\d| ?C\.?F\.?R)"
-CFR_PART = re.compile(rf"{CFR_TITLE}[Pp]arts? ({PART}(?:{JOIN}{PART})*)")
+CFR_PART = re.compile(rf"{CFR_TITLE}(?:[Pp]arts? )?({PART}(?:{JOIN}{PART})*)")
 
-# One section: 3 digits, optional letters, an optional "-1" as in 360eee-1,
-# then any "(a)", "(j)(2)" parts.
-SECTION = r"\d{3}[a-z]*(?:-\d+)?(?:\(\w+\))*"
+# One section: 3 digits, optional letters, a "-1" only after letters as in
+# 360eee-1 (so a range like 351-360 stays 351), then any "(a)", "(j)(2)" parts.
+SECTION_NUMBER = r"\d{3}(?:[a-z]+(?:-\d+)?)?"
+SECTION = rf"{SECTION_NUMBER}(?:\(\w+\))*"
 
 # "21 U.S.C.", optional "§ " or "§§ ", then sections joined by ", ", " and ", " or ".
-USC = re.compile(rf"21 U\.S\.C\. (?:§§? )?({SECTION}(?:{JOIN}{SECTION})*)")
+USC = re.compile(rf"21 U\.S\.C\. (?:§§? ?)?({SECTION}(?:{JOIN}{SECTION})*)")
 PARENS = re.compile(r"\(\w+\)")
 
 
@@ -49,7 +50,7 @@ def usc_sections(text: str) -> list[str]:
     """Return the unique 21 U.S.C. section numbers cited in a letter, sorted."""
     found = set()
     for chunk in USC.findall(normalize(text)):
-        found.update(re.findall(r"\d+[a-z]*(?:-\d+)?", PARENS.sub("", chunk)))
+        found.update(re.findall(SECTION_NUMBER, PARENS.sub("", chunk)))
     return sorted(found)
 
 

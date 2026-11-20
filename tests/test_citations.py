@@ -37,3 +37,16 @@ def test_cfr_parts():
     assert cfr_parts("21 CFR part 1, subpart L") == ["1"]
     assert cfr_parts("21 CFR Part 806 and 21 CFR part 1271") == ["806", "1271"]
     assert cfr_parts("21 CFR part 1.502(a)") == []
+
+
+def test_review_round_spellings():
+    # A range keeps only its first section; "-1" belongs to lettered sections only.
+    assert usc_sections("21 U.S.C. 351-360") == ["351"]
+    assert usc_sections("21 U.S.C. §§ 331-333") == ["331"]
+    # No space after "§".
+    assert cfr_rules("21 CFR §211.22") == ["211.22"]
+    assert usc_sections("21 U.S.C. §331(a)") == ["331"]
+    # Parts after a comma, and a bare part number.
+    assert cfr_parts("(21 CFR, Part 820)") == ["820"]
+    assert cfr_parts("part 312 [21 CFR 312]") == ["312"]
+    assert cfr_parts("21 CFR 211.22") == []
