@@ -61,7 +61,7 @@ The labels come from comparing the parser to a looser search and reading by hand
 A citation both of them miss is not in the labels, and citations both found were not each read.
 A code review found 2 part citations both had missed, `(21 CFR, Part 820)` and `[21 CFR 312]`: parts recall was 95% (40 of 42) before the parser learned those spellings.
 The bare form `21 CFR 312` is barely in the 30 letters, so it was checked apart: across 708 fetched letters it matched 104 times.
-Of 25 picked at random, listed in `tests/fixtures/eval/bare_parts_sample.jsonl`, 23 are clean part citations.
+Of 25 picked at random by `scripts/bare_parts_sample.py` (seed 3, a 708-letter `letters.db` fetched on 2026-11-20), 23 are clean part citations; each row of `tests/fixtures/eval/bare_parts_sample.jsonl` carries its match and hand verdict.
 The other 2: the range `21 CFR 1000-1005` gives only part 1000, and the garbled `21 CFR1 .500` gives part 1.
 The one `cfr` miss is `CFR 201.66(b)(2)` written without the "21".
 Run `uv run python tests/test_citation_eval.py` to print the scores; CI fails if they drop.
