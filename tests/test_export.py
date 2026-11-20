@@ -51,6 +51,8 @@ def test_jsonl_one_line_per_letter_letter_wins(tmp_path):
     assert len(rows) == 2
     assert rows["Acme"]["text"] == TEXT
     assert rows["Acme"]["subject"] == "L"
+    assert rows["Acme"]["cfr"] == "211.22; 801.3"
+    assert rows["Acme"]["usc"] == "331; 355"
     assert rows["Beta"]["text"] == "b"
 
 
@@ -64,3 +66,12 @@ def test_since_filter(tmp_path):
     assert [r["company"] for r in read_jsonl(tmp_path / "out.jsonl")] == ["New"]
     to_csv(db, tmp_path / "all.csv")
     assert len(read_csv(tmp_path / "all.csv")) == 2
+
+
+def test_undated_letter_in_full_export_only(tmp_path):
+    db = open_db(tmp_path / "letters.db")
+    save(db, row("Undated", None), {"text": ""})
+    to_csv(db, tmp_path / "all.csv")
+    assert [r["company"] for r in read_csv(tmp_path / "all.csv")] == ["Undated"]
+    to_csv(db, tmp_path / "since.csv", since="2026-01-01")
+    assert read_csv(tmp_path / "since.csv") == []

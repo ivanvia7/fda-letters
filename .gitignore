@@ -6,6 +6,7 @@ dist/
 letters.db
 letters.csv
 letters.jsonl
+!tests/fixtures/eval/letters.jsonl
 .env
 .playwright-mcp/
 .proxy-mcp/

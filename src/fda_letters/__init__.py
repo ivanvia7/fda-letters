@@ -13,6 +13,11 @@ def main() -> None:
         "--since", default="", help="only letters issued on or after YYYY-MM-DD"
     )
     parser.add_argument(
+        "--no-fetch",
+        action="store_true",
+        help="export letters already in letters.db without asking fda.gov",
+    )
+    parser.add_argument(
         "--serve", action="store_true", help="serve a web page on localhost:8000"
     )
     args = parser.parse_args()
@@ -25,7 +30,11 @@ def main() -> None:
         parser.error("--out must end with .csv or .jsonl")
 
     db = open_db()
-    print(update(db, args.limit, args.since), "new letters")
+    if not args.no_fetch:
+        saved, failed = update(db, args.limit, args.since)
+        print(saved, "new letters")
+        if failed:
+            print(len(failed), "letters skipped; the next run tries them again")
     if args.out.endswith(".csv"):
         to_csv(db, args.out, args.since)
     else:

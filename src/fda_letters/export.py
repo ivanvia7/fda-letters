@@ -1,7 +1,11 @@
 import csv
 import json
+import sqlite3
+from collections.abc import Iterator
+from os import PathLike
+from typing import Any
 
-from fda_letters.citations import cfr_rules, usc_sections
+from fda_letters.citations import citations
 
 COLUMNS = [
     "posted",
@@ -15,33 +19,38 @@ COLUMNS = [
     "Recipient",
     "Delivery Method",
     "cfr",
+    "cfr_parts",
     "usc",
 ]
 # Letters issued on or after a YYYY-MM-DD date; "" keeps every letter.
-SINCE = "SELECT row, letter FROM letters WHERE json_extract(row, '$.issued') >= ?"
+# COALESCE keeps letters with no issue date in a full export (NULL >= '' is NULL).
+SINCE = (
+    "SELECT row, letter FROM letters"
+    " WHERE COALESCE(json_extract(row, '$.issued'), '') >= ?"
+)
 
 
-def to_csv(db, path, since=""):
+Path = str | PathLike[str]
+
+
+def letters(db: sqlite3.Connection, since: str) -> Iterator[dict[str, Any]]:
+    """Each saved letter as one dict: index row, letter fields, then citations."""
+    for row, letter in db.execute(SINCE, (since,)):
+        merged = json.loads(row) | json.loads(letter)
+        yield merged | citations(merged["text"])
+
+
+def to_csv(db: sqlite3.Connection, path: Path, since: str = "") -> None:
     """Write one CSV line per saved letter; the full text stays out."""
 
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")
         writer.writeheader()
-        for row, letter in db.execute(SINCE, (since,)):
-            letter = json.loads(letter)
-            writer.writerow(
-                json.loads(row)
-                | letter
-                | {
-                    "cfr": "; ".join(cfr_rules(letter["text"])),
-                    "usc": "; ".join(usc_sections(letter["text"])),
-                }
-            )
+        writer.writerows(letters(db, since))
 
 
-def to_jsonl(db, path, since=""):
-    """Write one JSON object per saved letter; text included."""
+def to_jsonl(db: sqlite3.Connection, path: Path, since: str = "") -> None:
+    """Write one JSON object per saved letter; text and citations included."""
 
     with open(path, "w", encoding="utf-8") as f:
-        for row, letter in db.execute(SINCE, (since,)):
-            f.write(json.dumps(json.loads(row) | json.loads(letter)) + "\n")
+        f.writelines(json.dumps(letter) + "\n" for letter in letters(db, since))

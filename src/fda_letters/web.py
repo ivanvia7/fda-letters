@@ -4,6 +4,7 @@ import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any, cast
 from urllib.parse import parse_qs, urlparse
 
 from fda_letters.citations import cfr_rules
@@ -11,7 +12,13 @@ from fda_letters.export import to_csv, to_jsonl
 from fda_letters.storage import open_db, update
 
 FILES = {"/letters.csv": "text/csv", "/letters.jsonl": "application/x-ndjson"}
-STATUS = {"state": "idle", "done": 0, "total": 0, "error": ""}
+STATUS: dict[str, Any] = {
+    "state": "idle",
+    "done": 0,
+    "total": 0,
+    "skipped": 0,
+    "error": "",
+}
 ISSUED = "json_extract(row, '$.issued')"
 MATCH = (
     "WHERE json_extract(row, '$.company') LIKE :q ESCAPE '\\'"
@@ -177,7 +184,8 @@ async function poll() {
   text.textContent = {
     idle: error || "Fetches only letters not saved yet. One request a second.",
     running: `${s.done} of ${s.total} new letters`,
-    done: `Done. ${s.total} new letters saved.`,
+    done: `Done. ${s.total - s.skipped} new letters saved` +
+      (s.skipped ? `, ${s.skipped} skipped, tried again next fetch.` : "."),
     failed: `Failed: ${s.error}`,
   }[s.state];
 }
@@ -218,11 +226,14 @@ setInterval(poll, 1000);
 """
 
 
-def run(limit, since):
+def run(limit: int | None, since: str) -> None:
     """Fetch new letters in the background, then write both export files."""
     try:
         db = open_db()  # sqlite connections stay in the thread that opened them
-        update(db, limit, since, lambda d, t: STATUS.update(done=d, total=t))
+        _, failed = update(
+            db, limit, since, lambda d, t: STATUS.update(done=d, total=t)
+        )
+        STATUS["skipped"] = len(failed)
         to_csv(db, "letters.csv", since)
         to_jsonl(db, "letters.jsonl", since)
         STATUS["state"] = "done"
@@ -230,7 +241,7 @@ def run(limit, since):
         STATUS.update(state="failed", error=str(error))
 
 
-def letters(query):
+def letters(query: str) -> dict[str, Any]:
     """Count saved letters matching a search; return the 50 newest."""
     db = open_db()
     like = {"q": "%" + re.sub(r"([%_\\])", r"\\\1", query) + "%"}
@@ -249,7 +260,7 @@ def letters(query):
 
 
 class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    def do_GET(self) -> None:
         url = urlparse(self.path)
         path = url.path
         if path == "/letters":
@@ -271,11 +282,14 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def do_POST(self):
+    def do_POST(self) -> None:
         # Browsers send Origin on a POST, so another site cannot start a fetch.
-        port = self.server.server_port
+        port = cast(ThreadingHTTPServer, self.server).server_port
         origin = self.headers.get("Origin")
-        if origin and origin not in (f"http://localhost:{port}", f"http://127.0.0.1:{port}"):
+        if origin and origin not in (
+            f"http://localhost:{port}",
+            f"http://127.0.0.1:{port}",
+        ):
             self.send_error(403)
             return
         if self.path != "/start" or STATUS["state"] == "running":
@@ -291,24 +305,25 @@ class Handler(BaseHTTPRequestHandler):
         if since and not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", since):
             self.send_error(400, "Issued since must be YYYY-MM-DD")
             return
-        limit = int(limit) if limit else None
         # Set before the thread starts, so the next /status already says running.
-        STATUS.update(state="running", done=0, total=0, error="")
-        threading.Thread(target=run, args=(limit, since), daemon=True).start()
+        STATUS.update(state="running", done=0, total=0, skipped=0, error="")
+        threading.Thread(
+            target=run, args=(int(limit) if limit else None, since), daemon=True
+        ).start()
         self.reply(b"{}", "application/json")
 
-    def reply(self, body, content_type):
+    def reply(self, body: bytes, content_type: str) -> None:
         self.send_response(200)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, *args):
+    def log_message(self, format: str, *args: Any) -> None:
         pass  # keep the terminal quiet; the page shows progress
 
 
-def serve(port=8000):
+def serve(port: int = 8000) -> None:
     """Serve the page on this machine only; Ctrl+C stops it."""
     print(f"Open http://localhost:{port}")
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
