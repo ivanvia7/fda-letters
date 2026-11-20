@@ -48,16 +48,19 @@ CSV leaves out the letter text. JSONL includes it as `text`.
 ## How accurate the citations are
 
 The parser is a set of regular expressions in `src/fda_letters/citations.py`.
-`tests/test_citation_eval.py` scores it against hand-checked labels for 30 random letters in `tests/fixtures/eval/`:
+`tests/test_citation_eval.py` scores it on 30 random letters in `tests/fixtures/eval/`, not the letters the parser was first written against:
 
 | Column | Precision | Recall | Citations in the 30 letters |
 |---|---|---|---|
 | `cfr` | 100% | 98.8% | 83 |
-| `cfr_parts` | 100% | 100% | 40 |
+| `cfr_parts` | 100% | 100% | 42 |
 | `usc` | 100% | 100% | 141 |
 
-Labels come from comparing the parser to a looser search and reading every place they disagree.
-The one miss is `CFR 201.66(b)(2)` written without the "21".
+Read these as upper bounds, not as hand-checked truth.
+The labels come from comparing the parser to a looser search and reading by hand every place the two disagree.
+A citation both of them miss is not in the labels, and citations both found were not each read.
+A code review found 2 part citations both had missed, `(21 CFR, Part 820)` and `[21 CFR 312]`: parts recall was 95% (40 of 42) before the parser learned those spellings.
+The one `cfr` miss is `CFR 201.66(b)(2)` written without the "21".
 Run `uv run python tests/test_citation_eval.py` to print the scores; CI fails if they drop.
 
 ## Web page

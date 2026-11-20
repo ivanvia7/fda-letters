@@ -1,8 +1,13 @@
-"""Score the citation parser against hand-checked labels for 30 random letters.
+"""Score the citation parser against labels for 30 random letters.
 
-Labels: the parser's output and a looser search were compared on every letter,
-and each place they disagreed was read by hand. Citations both found were not
-each read, so precision here is an upper bound. Run as a script to print scores:
+How the labels were made: the parser's output and a looser search were compared
+on every letter, and each place they disagreed was read by hand. Citations both
+found were not each read, and citations both missed are not in the labels.
+So precision and recall here are both upper bounds, not hand-checked truth.
+A code review later found 2 part citations both had missed; they are now in the
+labels and the parser, which makes the parts score fitted to them.
+
+Run as a script to print scores:
 
     uv run python tests/test_citation_eval.py
 """
@@ -42,7 +47,8 @@ def score() -> dict[str, dict[str, float]]:
 
 
 def test_citation_scores():
-    # Floors at the scores measured on 2026-11-20; a regex change must not drop them.
+    # Floors at the scores measured on 2026-11-20; a regex change must not drop
+    # them. They guard against regressions, they do not prove accuracy.
     scores = score()
     for column in PARSERS:
         assert scores[column]["precision"] == 1.0
