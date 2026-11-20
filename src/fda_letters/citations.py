@@ -10,8 +10,8 @@ CFR_TITLE = r"21 ?C\.?F\.?R\.?,? ?"
 CFR = re.compile(rf"{CFR_TITLE}(?:§§? ?|[Pp]art )?({RULE}(?:{JOIN}{RULE})*)")
 
 # "21 CFR part 211", "parts 210 and 211" or a bare "21 CFR 312": whole parts,
-# no section after them, and not the "21" of a next "21 CFR".
-PART = r"\d+\b(?!\.\d| ?C\.?F\.?R)"
+# no section or "(c)" after them, and not the "21" of a next "21 CFR".
+PART = r"\d+\b(?!\.\d|\(| ?C\.?F\.?R)"
 CFR_PART = re.compile(rf"{CFR_TITLE}(?:[Pp]arts? )?({PART}(?:{JOIN}{PART})*)")
 
 # One section: 3 digits, optional letters, a "-1" only after letters as in
@@ -19,7 +19,8 @@ CFR_PART = re.compile(rf"{CFR_TITLE}(?:[Pp]arts? )?({PART}(?:{JOIN}{PART})*)")
 SECTION_NUMBER = r"\d{3}(?:[a-z]+(?:-\d+)?)?"
 SECTION = rf"{SECTION_NUMBER}(?:\(\w+\))*"
 
-# "21 U.S.C.", optional "§ " or "§§ ", then sections joined by ", ", " and ", " or ".
+# "21 U.S.C.", "§" or "§§" with or without a space, then sections joined by
+# ", ", " and " or " or ".
 USC = re.compile(rf"21 U\.S\.C\. (?:§§? ?)?({SECTION}(?:{JOIN}{SECTION})*)")
 PARENS = re.compile(r"\(\w+\)")
 

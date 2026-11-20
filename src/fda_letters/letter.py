@@ -18,7 +18,7 @@ CLIENT = httpx.Client(
 def get(url: str, **params: str | int) -> httpx.Response:
     """GET, retrying a read timeout once; transport retries cover connects only."""
     try:
-        # params=None, not {}, so a query string already in the url stays.
+        # params=None when none are given, so a query already in the url stays.
         response = CLIENT.get(url, params=params or None)
     except httpx.ReadTimeout:
         response = CLIENT.get(url, params=params or None)

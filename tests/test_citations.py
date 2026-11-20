@@ -50,3 +50,6 @@ def test_review_round_spellings():
     assert cfr_parts("(21 CFR, Part 820)") == ["820"]
     assert cfr_parts("part 312 [21 CFR 312]") == ["312"]
     assert cfr_parts("21 CFR 211.22") == []
+    # A paragraph right after the number is a mangled section, not a whole part.
+    assert cfr_parts("21 CFR 42(c)(10)(iv)") == []
+    assert cfr_parts("21 CFR parts 210 and 211 (CGMP)") == ["210", "211"]

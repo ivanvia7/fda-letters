@@ -60,6 +60,7 @@ Read these as upper bounds, not as hand-checked truth.
 The labels come from comparing the parser to a looser search and reading by hand every place the two disagree.
 A citation both of them miss is not in the labels, and citations both found were not each read.
 A code review found 2 part citations both had missed, `(21 CFR, Part 820)` and `[21 CFR 312]`: parts recall was 95% (40 of 42) before the parser learned those spellings.
+The bare form `21 CFR 312` is barely in the 30 letters, so it was checked apart: across 690 fetched letters it matched 101 times, and 25 of 25 picked at random were real part citations.
 The one `cfr` miss is `CFR 201.66(b)(2)` written without the "21".
 Run `uv run python tests/test_citation_eval.py` to print the scores; CI fails if they drop.
 
